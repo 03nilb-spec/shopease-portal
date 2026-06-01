@@ -3,6 +3,15 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
+class OrderCreate(BaseModel):
+    """Pydantic schema for creating a new order."""
+
+    customer: str
+    items: List[str]
+    status: str
+    total: int
+
+
 class OrderResponse(BaseModel):
     """Pydantic schema for a single order returned by the API."""
 
@@ -33,6 +42,14 @@ class TicketResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TrackingCreate(BaseModel):
+    """Pydantic schema for adding tracking info to an order."""
+
+    order_id: str
+    location: str
+    eta: Optional[date] = None
 
 
 class TrackingResponse(BaseModel):
