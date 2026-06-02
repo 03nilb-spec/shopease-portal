@@ -1,6 +1,37 @@
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel
+
+
+class UserCreate(BaseModel):
+    """Pydantic schema for registering a new user."""
+
+    email: str
+    password: str
+
+
+class PromoteRequest(BaseModel):
+    """Pydantic schema for promoting or demoting a user's role."""
+
+    email: str
+    role: Literal["admin", "customer"]
+
+
+class UserResponse(BaseModel):
+    """Pydantic schema for a user record returned by the API."""
+
+    id: int
+    email: str
+    role: str
+
+    model_config = {"from_attributes": True}
+
+
+class Token(BaseModel):
+    """Pydantic schema for the JWT token response."""
+
+    access_token: str
+    token_type: str = "bearer"
 
 
 class OrderCreate(BaseModel):

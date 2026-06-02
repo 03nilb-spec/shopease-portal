@@ -3,8 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.auth import get_current_user, require_admin
 from app.db.database import get_db
-from app.db.models import Order
+from app.db.models import Order, User
 from app.models.schema import OrderCreate, OrderResponse
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -16,13 +17,18 @@ async def fetch_all_orders(db: AsyncSession) -> List[Order]:
     return result.scalars().all()
 
 
+async def fetch_customer_orders(email: str, db: AsyncSession) -> List[Order]:
+    """Return all orders belonging to the given customer email."""
+    result = await db.execute(
+        select(Order).where(Order.customer == email).order_by(Order.created_at.desc())
+    )
+    return result.scalars().all()
+
+
 async def fetch_order_by_id(order_id: str, db: AsyncSession) -> Optional[Order]:
     """Query the database and return a single order by its ID, or None if not found."""
     result = await db.execute(select(Order).where(Order.id == order_id))
     return result.scalar_one_or_none()
-
-
-VALID_STATUSES = {"shipped", "pending", "delivered", "cancelled"}
 
 
 async def generate_order_id(db: AsyncSession) -> str:
@@ -48,9 +54,16 @@ async def insert_order(data: OrderCreate, db: AsyncSession) -> Order:
     return order
 
 
+VALID_STATUSES = {"shipped", "pending", "delivered", "cancelled"}
+
+
 @router.post("/", response_model=OrderResponse, status_code=201)
-async def create_order(payload: OrderCreate, db: AsyncSession = Depends(get_db)):
-    """Create a new order and return the saved record with its assigned ID."""
+async def create_order(
+    payload: OrderCreate,
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new order — admin only."""
     if payload.status not in VALID_STATUSES:
         raise HTTPException(
             status_code=400,
@@ -60,18 +73,32 @@ async def create_order(payload: OrderCreate, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/", response_model=List[OrderResponse], status_code=200)
-async def get_all_orders(db: AsyncSession = Depends(get_db)):
-    """Return all orders from the database."""
-    return await fetch_all_orders(db)
+async def get_all_orders(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all orders for admins, or only the caller's orders for customers."""
+    if current_user.role == "admin":
+        return await fetch_all_orders(db)
+    return await fetch_customer_orders(current_user.email, db)
 
 
 @router.get("/{order_id}", response_model=OrderResponse, status_code=200)
-async def get_order(order_id: str, db: AsyncSession = Depends(get_db)):
-    """Return a single order by ID, or a friendly 404 if it doesn't exist."""
+async def get_order(
+    order_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a single order — admins see any order, customers only see their own."""
     order = await fetch_order_by_id(order_id, db)
     if order is None:
         raise HTTPException(
             status_code=404,
             detail=f"We couldn't find your order {order_id}. Please double-check the order ID and try again.",
+        )
+    if current_user.role != "admin" and order.customer != current_user.email:
+        raise HTTPException(
+            status_code=403,
+            detail="You don't have permission to view this order. Please contact support if you think this is a mistake.",
         )
     return order

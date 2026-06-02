@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.auth import get_current_user, require_admin
 from app.db.database import get_db
-from app.db.models import Order, Tracking
+from app.db.models import Order, Tracking, User
 from app.models.schema import TrackingCreate, TrackingResponse
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
@@ -35,8 +36,12 @@ async def insert_tracking(data: TrackingCreate, db: AsyncSession) -> Tracking:
 
 
 @router.post("/", response_model=TrackingResponse, status_code=201)
-async def create_tracking(payload: TrackingCreate, db: AsyncSession = Depends(get_db)):
-    """Add tracking info for an order; returns 404 if the order doesn't exist, 400 if tracking already exists."""
+async def create_tracking(
+    payload: TrackingCreate,
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add tracking info for an order — admin only."""
     if not await fetch_order(payload.order_id, db):
         raise HTTPException(
             status_code=404,
@@ -51,12 +56,23 @@ async def create_tracking(payload: TrackingCreate, db: AsyncSession = Depends(ge
 
 
 @router.get("/{order_id}", response_model=TrackingResponse, status_code=200)
-async def get_tracking(order_id: str, db: AsyncSession = Depends(get_db)):
-    """Return delivery tracking info for an order, or a friendly 404 if not found."""
+async def get_tracking(
+    order_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return tracking info — admins see any order's tracking, customers see only their own."""
     tracking = await fetch_tracking(order_id, db)
     if tracking is None:
         raise HTTPException(
             status_code=404,
             detail=f"We couldn't find tracking info for order {order_id}. It may still be processing — please check back soon!",
         )
+    if current_user.role != "admin":
+        order = await fetch_order(order_id, db)
+        if order is None or order.customer != current_user.email:
+            raise HTTPException(
+                status_code=403,
+                detail="You don't have permission to view tracking for this order.",
+            )
     return tracking

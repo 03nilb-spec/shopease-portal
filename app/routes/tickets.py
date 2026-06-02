@@ -3,8 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.auth import require_admin, require_customer
 from app.db.database import get_db
-from app.db.models import Order, Ticket
+from app.db.models import Order, Ticket, User
 from app.models.schema import TicketCreate, TicketResponse
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -44,19 +45,31 @@ async def insert_ticket(ticket_id: str, data: TicketCreate, db: AsyncSession) ->
 
 
 @router.get("/", response_model=List[TicketResponse], status_code=200)
-async def get_all_tickets(db: AsyncSession = Depends(get_db)):
-    """Return all support tickets from the database."""
+async def get_all_tickets(
+    _: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all support tickets — admin only."""
     return await fetch_all_tickets(db)
 
 
 @router.post("/", response_model=TicketResponse, status_code=201)
-async def create_ticket(data: TicketCreate, db: AsyncSession = Depends(get_db)):
-    """Create a new support ticket after validating the linked order exists."""
+async def create_ticket(
+    data: TicketCreate,
+    current_user: User = Depends(require_customer),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a support ticket — customers only, and only for their own orders."""
     order = await fetch_order(data.order_id, db)
     if order is None:
         raise HTTPException(
             status_code=404,
             detail=f"We couldn't find order {data.order_id}. Please double-check the order ID and try again.",
+        )
+    if order.customer != current_user.email:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only raise support tickets for your own orders. Please contact support if you need help.",
         )
     ticket_id = await generate_ticket_id(db)
     return await insert_ticket(ticket_id, data, db)

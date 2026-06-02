@@ -1,6 +1,17 @@
-from sqlalchemy import Column, String, Integer, TIMESTAMP, ARRAY, Text, Date, ForeignKey
+from sqlalchemy import Column, String, Integer, TIMESTAMP, ARRAY, Text, Date, ForeignKey, Index
 from sqlalchemy.sql import func
 from app.db.database import Base
+
+
+class User(Base):
+    """SQLAlchemy model for the users table."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    role = Column(String, nullable=False, server_default="customer")
 
 
 class Order(Base):
