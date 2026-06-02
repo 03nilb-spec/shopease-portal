@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.auth import require_admin, require_customer
+from app.auth.auth import get_current_user, require_admin, require_customer
 from app.db.database import get_db
 from app.db.models import Order, Ticket, User
 from app.models.schema import TicketCreate, TicketResponse
@@ -14,6 +14,17 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 async def fetch_all_tickets(db: AsyncSession) -> List[Ticket]:
     """Query the database and return all tickets sorted by newest first."""
     result = await db.execute(select(Ticket).order_by(Ticket.created_at.desc()))
+    return result.scalars().all()
+
+
+async def fetch_customer_tickets(email: str, db: AsyncSession) -> List[Ticket]:
+    """Return tickets raised against orders belonging to the given customer email."""
+    result = await db.execute(
+        select(Ticket)
+        .join(Order, Ticket.order_id == Order.id)
+        .where(Order.customer == email)
+        .order_by(Ticket.created_at.desc())
+    )
     return result.scalars().all()
 
 
@@ -46,11 +57,13 @@ async def insert_ticket(ticket_id: str, data: TicketCreate, db: AsyncSession) ->
 
 @router.get("/", response_model=List[TicketResponse], status_code=200)
 async def get_all_tickets(
-    _: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return all support tickets — admin only."""
-    return await fetch_all_tickets(db)
+    """Return all tickets for admins, or the caller's own tickets for customers."""
+    if current_user.role == "admin":
+        return await fetch_all_tickets(db)
+    return await fetch_customer_tickets(current_user.email, db)
 
 
 @router.post("/", response_model=TicketResponse, status_code=201)
