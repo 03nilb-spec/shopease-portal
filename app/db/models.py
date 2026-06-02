@@ -14,6 +14,18 @@ class Notification(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 
+class PasswordResetToken(Base):
+    """SQLAlchemy model for the password_reset_tokens table."""
+
+    __tablename__ = "password_reset_tokens"
+
+    token = Column(String, primary_key=True)
+    email = Column(String, nullable=False)
+    expires_at = Column(TIMESTAMP, nullable=False)
+    used = Column(Boolean, nullable=False, server_default="false")
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+
 class User(Base):
     """SQLAlchemy model for the users table."""
 

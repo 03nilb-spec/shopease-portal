@@ -3,6 +3,26 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Pydantic schema for requesting a password reset."""
+
+    email: str
+
+
+class ForgotPasswordResponse(BaseModel):
+    """Pydantic schema for the forgot-password response containing the reset token."""
+
+    reset_token: str
+    expires_at: datetime
+
+
+class ResetPasswordRequest(BaseModel):
+    """Pydantic schema for resetting a password using a token."""
+
+    token: str
+    new_password: str
+
+
 class UserCreate(BaseModel):
     """Pydantic schema for registering a new user."""
 
