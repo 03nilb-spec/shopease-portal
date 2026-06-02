@@ -83,6 +83,17 @@ class TrackingCreate(BaseModel):
     eta: Optional[date] = None
 
 
+class NotificationResponse(BaseModel):
+    """Pydantic schema for a notification returned by the API."""
+
+    id: int
+    message: str
+    is_read: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class TrackingResponse(BaseModel):
     """Pydantic schema for order tracking info returned by the API."""
 

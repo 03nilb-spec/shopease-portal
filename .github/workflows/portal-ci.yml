@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install fastapi asyncpg sqlalchemy[asyncio] alembic python-dotenv uvicorn pydantic
+          pip install fastapi asyncpg sqlalchemy[asyncio] alembic python-dotenv uvicorn pydantic python-jose[cryptography] passlib bcrypt==4.0.1
 
       - name: Check app imports correctly
         run: |

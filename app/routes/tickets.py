@@ -7,6 +7,7 @@ from app.auth.auth import get_current_user, require_admin, require_customer
 from app.db.database import get_db
 from app.db.models import Order, Ticket, User
 from app.models.schema import TicketCreate, TicketResponse
+from app.routes.notifications import insert_notification
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -85,4 +86,7 @@ async def create_ticket(
             detail="You can only raise support tickets for your own orders. Please contact support if you need help.",
         )
     ticket_id = await generate_ticket_id(db)
-    return await insert_ticket(ticket_id, data, db)
+    ticket = await insert_ticket(ticket_id, data, db)
+    message = f"New ticket {ticket_id} raised by {current_user.email}: {data.issue}"
+    await insert_notification(message, db)
+    return ticket

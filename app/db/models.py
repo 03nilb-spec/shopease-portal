@@ -1,6 +1,17 @@
-from sqlalchemy import Column, String, Integer, TIMESTAMP, ARRAY, Text, Date, ForeignKey, Index
+from sqlalchemy import Boolean, Column, String, Integer, TIMESTAMP, ARRAY, Text, Date, ForeignKey, Index
 from sqlalchemy.sql import func
 from app.db.database import Base
+
+
+class Notification(Base):
+    """SQLAlchemy model for the notifications table."""
+
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, nullable=False, server_default="false")
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
 
 class User(Base):
