@@ -33,6 +33,7 @@ async def create_user(data: UserCreate, db: AsyncSession) -> User:
     """Insert a new customer account with a hashed password and return the saved record."""
     user = User(
         email=data.email,
+        name=data.name,
         hashed_password=hash_password(data.password),
         role="customer",
     )

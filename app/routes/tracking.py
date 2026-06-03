@@ -70,7 +70,7 @@ async def get_tracking(
         )
     if current_user.role != "admin":
         order = await fetch_order(order_id, db)
-        if order is None or order.customer != current_user.email:
+        if order is None or order.user_id != current_user.id:
             raise HTTPException(
                 status_code=403,
                 detail="You don't have permission to view tracking for this order.",

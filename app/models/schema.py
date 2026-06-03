@@ -28,6 +28,18 @@ class UserCreate(BaseModel):
 
     email: str
     password: str
+    name: Optional[str] = None
+
+
+class CustomerProfileResponse(BaseModel):
+    """Pydantic schema for a customer's own profile."""
+
+    id: int
+    email: str
+    name: Optional[str]
+    role: str
+
+    model_config = {"from_attributes": True}
 
 
 class PromoteRequest(BaseModel):
@@ -112,6 +124,54 @@ class NotificationResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ProductCreate(BaseModel):
+    """Pydantic schema for creating a new product."""
+
+    name: str
+    description: Optional[str] = None
+    price: int
+    category: str
+    stock: int
+
+
+class ProductResponse(BaseModel):
+    """Pydantic schema for a product returned by the API."""
+
+    id: str
+    name: str
+    description: Optional[str]
+    price: int
+    category: str
+    stock: int
+
+    model_config = {"from_attributes": True}
+
+
+class AddToCartRequest(BaseModel):
+    """Pydantic schema for adding a product to the cart."""
+
+    product_id: str
+    quantity: int = 1
+
+
+class CartItemResponse(BaseModel):
+    """Pydantic schema for a single cart item with product details and subtotal."""
+
+    id: int
+    product_id: str
+    product_name: str
+    quantity: int
+    unit_price: int
+    subtotal: int
+
+
+class CartResponse(BaseModel):
+    """Pydantic schema for the full cart with items and running total."""
+
+    items: List[CartItemResponse]
+    total: int
 
 
 class TrackingResponse(BaseModel):

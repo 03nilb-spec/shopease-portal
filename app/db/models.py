@@ -1,6 +1,33 @@
-from sqlalchemy import Boolean, Column, String, Integer, TIMESTAMP, ARRAY, Text, Date, ForeignKey, Index
+from sqlalchemy import Boolean, Column, String, Integer, TIMESTAMP, ARRAY, Text, Date, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.sql import func
 from app.db.database import Base
+
+
+class Product(Base):
+    """SQLAlchemy model for the products table."""
+
+    __tablename__ = "products"
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    price = Column(Integer, nullable=False)
+    category = Column(String, nullable=False)
+    stock = Column(Integer, nullable=False, server_default="0")
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+
+class CartItem(Base):
+    """SQLAlchemy model for the cart_items table."""
+
+    __tablename__ = "cart_items"
+    __table_args__ = (UniqueConstraint("user_id", "product_id", name="uq_cart_user_product"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False, server_default="1")
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
 
 class Notification(Base):
@@ -33,6 +60,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(String, unique=True, nullable=False, index=True)
+    name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(String, nullable=False, server_default="customer")
 
@@ -43,6 +71,7 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(String, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     customer = Column(String, nullable=False)
     items = Column(ARRAY(Text), nullable=False)
     status = Column(String, nullable=False)

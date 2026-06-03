@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import auth, notifications, orders, tickets, tracking
+from app.routes import auth, cart, customer_profile, notifications, orders, products, tickets, tracking
 
 app = FastAPI(title="ShopEase Customer Portal")
 
@@ -13,6 +13,9 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(cart.router)
+app.include_router(customer_profile.router)
+app.include_router(products.router)
 app.include_router(notifications.router)
 app.include_router(orders.router)
 app.include_router(tickets.router)

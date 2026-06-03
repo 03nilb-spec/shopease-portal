@@ -18,12 +18,12 @@ async def fetch_all_tickets(db: AsyncSession) -> List[Ticket]:
     return result.scalars().all()
 
 
-async def fetch_customer_tickets(email: str, db: AsyncSession) -> List[Ticket]:
-    """Return tickets raised against orders belonging to the given customer email."""
+async def fetch_customer_tickets(user_id: int, db: AsyncSession) -> List[Ticket]:
+    """Return tickets raised against orders belonging to the given user_id."""
     result = await db.execute(
         select(Ticket)
         .join(Order, Ticket.order_id == Order.id)
-        .where(Order.customer == email)
+        .where(Order.user_id == user_id)
         .order_by(Ticket.created_at.desc())
     )
     return result.scalars().all()
@@ -64,7 +64,7 @@ async def get_all_tickets(
     """Return all tickets for admins, or the caller's own tickets for customers."""
     if current_user.role == "admin":
         return await fetch_all_tickets(db)
-    return await fetch_customer_tickets(current_user.email, db)
+    return await fetch_customer_tickets(current_user.id, db)
 
 
 @router.post("/", response_model=TicketResponse, status_code=201)
@@ -80,7 +80,7 @@ async def create_ticket(
             status_code=404,
             detail=f"We couldn't find order {data.order_id}. Please double-check the order ID and try again.",
         )
-    if order.customer != current_user.email:
+    if order.user_id != current_user.id:
         raise HTTPException(
             status_code=403,
             detail="You can only raise support tickets for your own orders. Please contact support if you need help.",
